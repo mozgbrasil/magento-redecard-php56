@@ -1,0 +1,36 @@
+<?xml version="1.0"?>
+<!--
+/**
+ * Copyright © 2016 Mozg. All rights reserved.
+ * See LICENSE.txt for license details.
+ */
+-->
+<config>
+    <menu>
+        <sales>
+            <children>
+                <mozg_redecard module="mozg_redecard" translate="title">
+                    <title>Mozg Redecard Notification Queue</title>
+                    <sort_order>600</sort_order>
+                    <action>adminhtml/mozg_redecard_event_queue</action>
+                </mozg_redecard>
+            </children>
+        </sales>
+    </menu>
+    <acl>
+        <resources>
+            <admin>
+                <children>
+                    <sales>
+                        <children>
+                            <mozg_redecard translate="title">
+                                <title>Mozg Redecard Notification Queue</title>
+                                <sort_order>600</sort_order>
+                            </mozg_redecard>
+                        </children>
+                    </sales>
+                </children>
+            </admin>
+        </resources>
+    </acl>
+</config>

@@ -1,0 +1,106 @@
+<?php
+/**
+ * Copyright © 2016 Mozg. All rights reserved.
+ * See LICENSE.txt for license details.
+ */
+?>
+<?php echo $this->htmlEscape($this->getMethod()->getTitle()) ?><br/>
+<?php
+
+//dump(get_class_methods(get_class($this)));
+$info = $this->getInfo();
+if ($info) {
+
+    echo $this->__('Name on the Card: %s', $this->htmlEscape($info->getCcOwner()))."<br/>";
+    echo $this->__('Credit Card Type: %s', $this->htmlEscape($this->getCcTypeName()))."<br/>";
+    echo $this->__('Credit Card Number: xxxx-%s', $this->htmlEscape($info->getCcLast4()))."<br/>";
+    echo $this->__('Expiration Date: %s/%s', $this->htmlEscape($this->getCcExpMonth()), $this->htmlEscape($info->getCcExpYear()));
+
+    if($this->hasInstallments()):
+        echo "<br />" . $this->__('Installments: %s',  $this->htmlEscape($info->getAdditionalInformation('number_of_installments')))."<br/>";
+    endif;
+}
+?>
+
+<?php
+
+$controllerName = Mage::app ()->getRequest ()->getControllerName ();
+$moduleName = Mage::app ()->getRequest ()->getModuleName ();
+$isValidCheckout = !strcmp ($controllerName, 'onepage') || !strcmp ($moduleName, 'onestepcheckout') ? true : false;
+
+if ( $isValidCheckout && !empty($info->getMozgPspReference()) ) {
+
+    $order = $info->getOrder();
+    $payment = $order->getPayment();
+    $mozg_redecard_komerci_request_data = $payment->getAdditionalInformation('mozg_redecard_komerci_request_data');
+    $mozg_redecard_komerci_response_data = $payment->getAdditionalInformation('mozg_redecard_komerci_response_data');
+
+    $variables = array(
+        'demoMode' => (Mage::getStoreConfig('payment/mozg_redecard_abstract/demoMode') == 'Y') ? true : false,
+        'ApiKey' => Mage::getStoreConfig('payment/mozg_redecard_abstract/ApiKey'),
+        'Username' => Mage::getStoreConfig('payment/mozg_redecard_abstract/Username'),
+        'Password' => Mage::helper('core')->decrypt(Mage::getStoreConfig('payment/mozg_redecard_abstract/Password')),
+        'DATA' => $mozg_redecard_komerci_response_data['DATA'],
+        'TRANSORIG' => $mozg_redecard_komerci_request_data['Transacao'],
+        'PARCELAS' => $mozg_redecard_komerci_request_data['Parcelas'],
+        'FILIACAO' => $mozg_redecard_komerci_request_data['Filiacao'],
+        'DISTRIBUIDOR' => $mozg_redecard_komerci_request_data['Distribuidor'],
+        'TOTAL' => $mozg_redecard_komerci_request_data['Total'],
+        'NUMPEDIDO' => $mozg_redecard_komerci_request_data['NumPedido'],
+        'NUMAUTOR' => $mozg_redecard_komerci_response_data['NUMAUTOR'],
+        'NUMCV' => $mozg_redecard_komerci_response_data['NUMCV'],
+        'NUMSQN' => $mozg_redecard_komerci_response_data['NUMSQN']
+    );
+
+    //dump($variables);exit;
+
+    // Set Arguments 2 Var
+    foreach($variables as $key => $value) {
+        $$key = $value;
+        //$this->debugData[][__LINE__]['variable'] = $key . ' = ' . $$key;
+    }
+
+    $url = "https://ecommerce.redecard.com.br/pos_virtual/confirma.asp?DATA=$DATA&TRANSACAO=203&TRANSORIG=$TRANSORIG&PARCELAS=$PARCELAS&FILIACAO=$FILIACAO&DISTRIBUIDOR=$DISTRIBUIDOR&TOTAL=$TOTAL&NUMPEDIDO=$NUMPEDIDO&NUMAUTOR=$NUMAUTOR&NUMCV=$NUMCV&NUMSQN=$NUMSQN";
+
+    $html = 
+<<<EOF
+
+<br>
+
+<div class="entry-edit" id="mozg-redecard-komerci-confirma-block">
+<div class="entry-edit-head">
+<h4 class="icon-head head-shipping-method">Solicitação de Confirmação</h4>
+</div>
+<fieldset>
+<div >
+<iframe src="$url" width="100%" height="100" frameborder="0" name="mozg-redecard-komerci-confirma" id="mozg-redecard-komerci-confirma" style="border:1px solid #d6d6d6;"><p>Your browser does not support iframes.</p></iframe>
+</div>
+</fieldset>
+</div>
+
+EOF;
+
+    echo $html;
+
+
+    $url = "https://ecommerce.redecard.com.br/pos_virtual/cupom.asp?Filiacao=$ApiKey&Data=$DATA&NumAutor=$NUMAUTOR&NumCv=$NUMCV&LANGUAGE=E";
+
+    $html = 
+<<<EOF
+
+<div class="entry-edit" id="mozg-redecard-komerci-cupom-block">
+<div class="entry-edit-head">
+<h4 class="icon-head head-shipping-method">Solicitação de Comprovante de Vendas</h4>
+</div>
+<fieldset>
+<div >
+<iframe src="$url" width="100%" height="500" frameborder="0" name="mozg-redecard-komerci-cupom" id="mozg-redecard-komerci-cupom" style="border:1px solid #d6d6d6;"><p>Your browser does not support iframes.</p></iframe>
+</div>
+</fieldset>
+</div>
+
+EOF;
+
+    echo $html;
+}
+?>
