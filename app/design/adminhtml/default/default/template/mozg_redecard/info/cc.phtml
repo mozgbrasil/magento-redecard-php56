@@ -1,0 +1,145 @@
+<?php
+/**
+ * Copyright © 2016 Mozg. All rights reserved.
+ * See LICENSE.txt for license details.
+ */
+?>
+
+<?php
+//dump(get_class_methods(get_class($this)));
+$info = $this->getInfo();
+?>
+
+<?php
+$ownerInformation = $info->getCcOwner();
+echo $this->htmlEscape($this->getMethod()->getTitle());
+?><br/>
+<?php if ($info): ?>
+    <?php if ($info->getMozgPspReference() == ''): ?>
+        <?php echo Mage::helper('mozg_redecard')->__('Payment has not been processed yet.') ?> <br/>
+    <?php else :?>
+
+        <?php 
+        $order = $info->getOrder();
+        $pspReference = $this->htmlEscape($info->getMozgPspReference());
+        $realOrderId = $order->getRealOrderId();
+        $url = Mage::helper('adminhtml')->getUrl('adminhtml/RedecardConsulta/', array('pspReference' => $pspReference,'OrderId' => $realOrderId) );
+        $link = "javascript:openPopupsMozg('$url', 'WinXilinus', 'Link', 'Redecard', 'redecard');";
+
+        echo Mage::helper('mozg_redecard')->__('Redecard PSP Reference: %s', $pspReference) . '<br/>';
+        ?> 
+
+    <?php endif;?>
+
+    <?php echo Mage::helper('mozg_redecard')->__('Name on the Card: %s', $this->htmlEscape($info->getCcOwner())) ?><br/>
+    <?php echo Mage::helper('mozg_redecard')->__('Credit Card Type: %s', $this->htmlEscape($this->getCcTypeName())) ?><br/>
+    <?php echo Mage::helper('mozg_redecard')->__('Credit Card Number: xxxx-%s', $this->htmlEscape($info->getCcLast4())) ?><br/>
+    <?php echo Mage::helper('mozg_redecard')->__('Expiration Date: %s/%s', $this->htmlEscape($this->getCcExpMonth()), $this->htmlEscape($info->getCcExpYear())) ?><br/>
+
+    <?php if($this->htmlEscape($info->getMozgAvsResult()) != ""): ?>
+        <?php echo Mage::helper('mozg_redecard')->__('Avs result: %s', $this->htmlEscape($info->getMozgAvsResult())) ?><br/>
+    <?php endif; ?>
+
+    <?php if($this->htmlEscape($info->getMozgCvcResult()) != ""): ?>
+        <?php echo Mage::helper('mozg_redecard')->__('Cvc result: %s', $this->htmlEscape($info->getMozgCvcResult())) ?><br/>
+    <?php endif; ?>
+    <?php if($this->htmlEscape($info->getMozgTotalFraudScore()) != ""): ?>
+        <?php echo Mage::helper('mozg_redecard')->__('Total fraud score: %s', $this->htmlEscape($info->getMozgTotalFraudScore())) ?><br/>
+    <?php endif; ?>
+    <?php if($this->htmlEscape($info->getAdditionalInformation('number_of_installments')) != "" && $this->htmlEscape($info->getAdditionalInformation('number_of_installments')) > 1): ?>
+        <?php echo Mage::helper('mozg_redecard')->__('Number of installments: %s', $this->htmlEscape($info->getAdditionalInformation('number_of_installments'))) ?><br/>
+    <?php endif; ?>
+    <?php if($this->htmlEscape($info->getMozgRefusalReasonRaw()) != ""): ?>
+        <?php echo Mage::helper('mozg_redecard')->__('Raw acquirer response: %s', $this->htmlEscape($info->getMozgRefusalReasonRaw())) ?><br/>
+    <?php endif; ?>
+    <?php if($this->htmlEscape($info->getMozgAuthCode()) != ""): ?>
+        <?php echo Mage::helper('mozg_redecard')->__('Authorisation code: %s', $this->htmlEscape($info->getMozgAuthCode())) ?><br/>
+    <?php endif; ?>
+    <?php if($this->htmlEscape($info->getMozgAcquirerReference()) != ""): ?>
+        <?php echo Mage::helper('mozg_redecard')->__('Acquirer reference: %s', $this->htmlEscape($info->getMozgAcquirerReference())) ?><br/>
+    <?php endif; ?>
+
+
+    <?php if ($info->getMozgPspReference() == ''): ?>
+
+    <?php else :?>
+
+        <?php 
+
+        $order = $info->getOrder();
+        $amount = $order->getGrandTotal();
+        $payment = $order->getPayment();
+        $mozg_redecard_komerci_request_data = $payment->getAdditionalInformation('mozg_redecard_komerci_request_data');
+        $mozg_redecard_komerci_response_data = $payment->getAdditionalInformation('mozg_redecard_komerci_response_data');
+        $variables = array(
+            'demoMode' => (Mage::getStoreConfig('payment/mozg_redecard_abstract/demoMode') == 'Y') ? true : false,
+            'ApiKey' => Mage::getStoreConfig('payment/mozg_redecard_abstract/ApiKey'),
+            'Username' => Mage::getStoreConfig('payment/mozg_redecard_abstract/Username'),
+            'Password' => Mage::helper('core')->decrypt(Mage::getStoreConfig('payment/mozg_redecard_abstract/Password')),
+            'DATA' => $mozg_redecard_komerci_response_data['DATA'],
+            'TRANSORIG' => $mozg_redecard_komerci_request_data['Transacao'],
+            'PARCELAS' => $mozg_redecard_komerci_request_data['Parcelas'],
+            'FILIACAO' => $mozg_redecard_komerci_request_data['Filiacao'],
+            'DISTRIBUIDOR' => $mozg_redecard_komerci_request_data['Distribuidor'],
+            'TOTAL' => $mozg_redecard_komerci_request_data['Total'],
+            'NUMPEDIDO' => $mozg_redecard_komerci_request_data['NumPedido'],
+            'NUMAUTOR' => $mozg_redecard_komerci_response_data['NUMAUTOR'],
+            'NUMCV' => $mozg_redecard_komerci_response_data['NUMCV'],
+            'NUMSQN' => $mozg_redecard_komerci_response_data['NUMSQN']
+
+        );
+
+        // Set Arguments 2 Var
+        foreach($variables as $key => $value) {
+            $$key = $value;
+            //$this->debugData[][__LINE__]['variable'] = $key . ' = ' . $$key;
+        }
+
+        $url = "https://ecommerce.redecard.com.br/pos_virtual/confirma.asp?DATA=$DATA&TRANSACAO=203&TRANSORIG=$TRANSORIG&PARCELAS=$PARCELAS&FILIACAO=$FILIACAO&DISTRIBUIDOR=$DISTRIBUIDOR&TOTAL=$TOTAL&NUMPEDIDO=$NUMPEDIDO&NUMAUTOR=$NUMAUTOR&NUMCV=$NUMCV&NUMSQN=$NUMSQN";
+
+        $html = 
+<<<EOF
+
+<br>
+
+<div class="entry-edit" id="mozg-redecard-komerci-confirma-block">
+<div class="entry-edit-head">
+<h4 class="icon-head head-shipping-method">Solicitação de Confirmação</h4>
+</div>
+<fieldset>
+<div >
+<iframe src="$url" width="100%" height="100" frameborder="0" name="mozg-redecard-komerci-confirma" id="mozg-redecard-komerci-confirma" style="border:1px solid #d6d6d6;"><p>Your browser does not support iframes.</p></iframe>
+</div>
+</fieldset>
+</div>
+
+EOF;
+
+        echo $html;
+
+
+        /*$url = "https://ecommerce.redecard.com.br/pos_virtual/cupom.asp?Filiacao=$ApiKey&Data=$DATA&NumAutor=$NUMAUTOR&NumCv=$NUMCV&LANGUAGE=E";
+
+       $html = 
+<<<EOF
+
+<div class="entry-edit" id="mozg-redecard-komerci-cupom-block">
+<div class="entry-edit-head">
+<h4 class="icon-head head-shipping-method">Solicitação de Comprovante de Vendas</h4>
+</div>
+<fieldset>
+<div >
+<iframe src="$url" width="100%" height="500" frameborder="0" name="mozg-redecard-komerci-cupom" id="mozg-redecard-komerci-cupom" style="border:1px solid #d6d6d6;"><p>Your browser does not support iframes.</p></iframe>
+</div>
+</fieldset>
+</div>
+
+EOF;
+
+        echo $html;*/
+
+        ?> 
+
+    <?php endif;?>
+
+<?php endif;?>
